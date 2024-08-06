@@ -1,2 +1,4 @@
 /target
+/.vscode
+/.github
 Cargo.lock
