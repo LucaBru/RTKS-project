@@ -1,65 +1,97 @@
 #![no_main]
 #![no_std]
-#![feature(type_alias_impl_trait)]
 
-use test_app as _; // global logger + panicking-behavior + memory layout
+/* 
+#![deny(warnings)]
+#![deny(unsafe_code)]
+#![deny(missing_docs)] */
 
-// TODO(7) Configure the `rtic::app` macro
-#[rtic::app(
-    // TODO: Replace `some_hal::pac` with the path to the PAC
-    device = some_hal::pac,
-    // TODO: Replace the `FreeInterrupt1, ...` with free interrupt vectors if software tasks are used
-    // You can usually find the names of the interrupt vectors in the some_hal::pac::interrupt enum.
-    dispatchers = [FreeInterrupt1, ...]
-)]
+use panic_semihosting as _;
+
+#[rtic::app(device = lm3s6965, dispatchers = [UART0, UART1])]
 mod app {
-    // Shared resources go here
-    #[shared]
-    struct Shared {
-        // TODO: Add resources
-    }
+    use cortex_m_semihosting::{debug, hprintln};
 
-    // Local resources go here
+    // shared resources
+    #[shared]
+    struct Shared {}
+
+    // local resources
     #[local]
     struct Local {
-        // TODO: Add resources
+        local_to_foo: i64,
+        local_to_bar: i64,
+        local_to_idle: i64,
     }
 
+    // runs before any other task and returns resources
+    // `#[init]` cannot access locals from the `#[local]` struct as they are initialized here.
     #[init]
-    fn init(cx: init::Context) -> (Shared, Local) {
-        defmt::info!("init");
-
-        // TODO setup monotonic if used
-        // let sysclk = { /* clock setup + returning sysclk as an u32 */ };
-        // let token = rtic_monotonics::create_systick_token!();
-        // rtic_monotonics::systick::Systick::new(cx.core.SYST, sysclk, token);
-
-
-        task1::spawn().ok();
+    fn init(_: init::Context) -> (Shared, Local) {
+        foo::spawn().unwrap();
+        bar::spawn().unwrap();
 
         (
-            Shared {
-                // Initialization of shared resources go here
-            },
+            Shared {},
+            // initial values for the `#[local]` resources
             Local {
-                // Initialization of local resources go here
+                local_to_foo: 0,
+                local_to_bar: 0,
+                local_to_idle: 0,
             },
         )
     }
 
-    // Optional idle, can be removed if not needed.
-    #[idle]
-    fn idle(_: idle::Context) -> ! {
-        defmt::info!("idle");
+    // task with lowest priority
+    // `local_to_idle` can only be accessed from this context
+    #[idle(local = [local_to_idle])]
+    fn idle(cx: idle::Context) -> ! {
+        let local_to_idle = cx.local.local_to_idle;
+        *local_to_idle += 1;
+
+        hprintln!("idle: local_to_idle = {}", local_to_idle);
+
+        debug::exit(debug::EXIT_SUCCESS); // Exit QEMU simulator
+
+        // error: no `local_to_foo` field in `idle::LocalResources`
+        // _cx.local.local_to_foo += 1;
+
+        // error: no `local_to_bar` field in `idle::LocalResources`
+        // _cx.local.local_to_bar += 1;
 
         loop {
-            continue;
+            cortex_m::asm::nop();
         }
     }
 
-    // TODO: Add tasks
-    #[task(priority = 1)]
-    async fn task1(_cx: task1::Context) {
-        defmt::info!("Hello from task1!");
+    // `local_to_foo` can only be accessed from this context
+    #[task(local = [local_to_foo], priority = 1)]
+    async fn foo(cx: foo::Context) {
+        let local_to_foo = cx.local.local_to_foo;
+        *local_to_foo += 1;
+
+        // error: no `local_to_bar` field in `foo::LocalResources`
+        // cx.local.local_to_bar += 1;
+
+        hprintln!("foo: local_to_foo = {}", local_to_foo);
+    }
+
+    // `local_to_bar` can only be accessed from this context
+    #[task(local = [local_to_bar], priority = 1)]
+    async fn bar(cx: bar::Context) {
+        let local_to_bar = cx.local.local_to_bar;
+        *local_to_bar += 1;
+
+        // error: no `local_to_foo` field in `bar::LocalResources`
+        // cx.local.local_to_foo += 1;
+
+        hprintln!("bar: local_to_bar = {}", local_to_bar);
     }
 }
+
+/*
+General guidelines:
+    - tasks priority are sorted in ascending order (if no priority if specified => 0 is the default value)
+    - all tasks (except init and idle) run as interrupt handlers
+    - tasks bounded to interrupts are hardware task
+*/
