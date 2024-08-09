@@ -1,16 +1,18 @@
 #![no_main]
 #![no_std]
-
-/* 
 #![deny(warnings)]
 #![deny(unsafe_code)]
-#![deny(missing_docs)] */
+//#![deny(missing_docs)]
 
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965, dispatchers = [UART0, UART1])]
+#[rtic::app(device = lm3s6965, dispatchers = [UART0, UART1, UART2], peripherals = true)]
 mod app {
-    use cortex_m_semihosting::{debug, hprintln};
+
+    use cortex_m_semihosting::hprintln;
+    use rtic_monotonics::{fugit::MillisDurationU32, systick::prelude::*};
+
+    systick_monotonic!(Mono, 1000);
 
     // shared resources
     #[shared]
@@ -18,74 +20,38 @@ mod app {
 
     // local resources
     #[local]
-    struct Local {
-        local_to_foo: i64,
-        local_to_bar: i64,
-        local_to_idle: i64,
-    }
+    struct Local {}
 
     // runs before any other task and returns resources
     // `#[init]` cannot access locals from the `#[local]` struct as they are initialized here.
     #[init]
-    fn init(_: init::Context) -> (Shared, Local) {
-        foo::spawn().unwrap();
-        bar::spawn().unwrap();
+    fn init(cx: init::Context) -> (Shared, Local) {
+        hprintln!("init");
+
+        Mono::start(cx.core.SYST, 12_000_000);
+
+        regular_producer::spawn().ok();
 
         (
             Shared {},
             // initial values for the `#[local]` resources
-            Local {
-                local_to_foo: 0,
-                local_to_bar: 0,
-                local_to_idle: 0,
-            },
+            Local {},
         )
     }
 
-    // task with lowest priority
-    // `local_to_idle` can only be accessed from this context
-    #[idle(local = [local_to_idle])]
-    fn idle(cx: idle::Context) -> ! {
-        let local_to_idle = cx.local.local_to_idle;
-        *local_to_idle += 1;
+    #[idle]
+    fn idle(_: idle::Context) -> ! {
+        hprintln!("idle");
+        loop {}
+    }
 
-        hprintln!("idle: local_to_idle = {}", local_to_idle);
-
-        debug::exit(debug::EXIT_SUCCESS); // Exit QEMU simulator
-
-        // error: no `local_to_foo` field in `idle::LocalResources`
-        // _cx.local.local_to_foo += 1;
-
-        // error: no `local_to_bar` field in `idle::LocalResources`
-        // _cx.local.local_to_bar += 1;
-
+    #[task(priority = 7)]
+    async fn regular_producer(_: regular_producer::Context) {
+        let period: MillisDurationU32 = 1000.millis();
         loop {
-            cortex_m::asm::nop();
+            hprintln!("regular producer");
+            Mono::delay_until(Mono::now() + period).await;
         }
-    }
-
-    // `local_to_foo` can only be accessed from this context
-    #[task(local = [local_to_foo], priority = 1)]
-    async fn foo(cx: foo::Context) {
-        let local_to_foo = cx.local.local_to_foo;
-        *local_to_foo += 1;
-
-        // error: no `local_to_bar` field in `foo::LocalResources`
-        // cx.local.local_to_bar += 1;
-
-        hprintln!("foo: local_to_foo = {}", local_to_foo);
-    }
-
-    // `local_to_bar` can only be accessed from this context
-    #[task(local = [local_to_bar], priority = 1)]
-    async fn bar(cx: bar::Context) {
-        let local_to_bar = cx.local.local_to_bar;
-        *local_to_bar += 1;
-
-        // error: no `local_to_foo` field in `bar::LocalResources`
-        // cx.local.local_to_foo += 1;
-
-        hprintln!("bar: local_to_bar = {}", local_to_bar);
     }
 }
 

@@ -1,17 +1,17 @@
 [package]
-name = "RTK&S project"
-edition = "2024"
-version = "0.0.1"
+name = "RTKS-project"
+edition = "2021"
+version = "0.1.0"
 
 [dependencies]
 cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
-cortex-m-semihosting = "0.3.7"
+cortex-m-semihosting = "0.5"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 rtic = { version = "2.0.0", features = [ "thumbv7-backend" ] }
 lm3s6965 = "0.2"
 panic-semihosting = "0.6.0"
-# TODO add a monotonic if you use scheduling
-# rtic-monotonics = { version = "1.0.0", features = [ "cortex-m-systick" ]}
+rtic-monotonics = { version = "2.0.2", features = [ "cortex-m-systick" ]}
+
 
 # cargo build/run
 [profile.dev]
