@@ -8,8 +8,9 @@
 mod constant;
 mod tasks;
 mod types;
+mod utils;
 
-#[rtic::app(device = lm3s6965, dispatchers = [UART0, UART1, UART2, TIMER_0A, TIMER_0B], peripherals = true)]
+#[rtic::app(device = lm3s6965, dispatchers = [UART0, UART1, UART2, TIMER_0A, TIMER_0B])]
 mod app {
 
     use crate::constant::CAPACITY;
@@ -38,7 +39,7 @@ mod app {
     struct Local {
         // regular producer
         aux_work: u32,
-        period: MillisDurationU32,
+        reg_prod_period: MillisDurationU32,
 
         // on call producer
         on_call_prod_min_sep: MillisDurationU32,
@@ -81,7 +82,7 @@ mod app {
             // initial values for the `#[local]` resources
             Local {
                 aux_work: 100,
-                period: 1000.millis(),
+                reg_prod_period: 1000.millis(),
 
                 on_call_prod_min_sep: 3000.millis(),
                 push_butt_min_sep: 5000.millis(),
@@ -95,7 +96,7 @@ mod app {
 
     extern "Rust" {
 
-        #[task(priority = 6, local = [aux_work, period])]
+        #[task(priority = 6, local = [aux_work, reg_prod_period])]
         async fn regular_producer(
             cx: regular_producer::Context,
             mut sender: Sender<'static, u32, CAPACITY>,

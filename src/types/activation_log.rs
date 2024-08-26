@@ -1,8 +1,10 @@
-use rtic_monotonics::fugit::Instant;
+use crate::types::time_instant::TimeInstant;
+
+
 
 pub struct ActivationLog {
     pub counter: u8, // is mod 100
-    pub time: Instant<u32, 1, 1000>,
+    pub time: TimeInstant,
 }
 
 impl ActivationLog {
@@ -10,7 +12,7 @@ impl ActivationLog {
         self.counter = (self.counter + 1) % 100;
     }
 
-    pub fn read(&self) -> (u8, Instant<u32, 1, 1000>) {
+    pub fn read(&self) -> (u8, TimeInstant) {
         (self.counter, self.time)
     }
 }
