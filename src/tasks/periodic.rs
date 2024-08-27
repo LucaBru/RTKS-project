@@ -1,4 +1,4 @@
-use crate::{constant::CAPACITY, utils::get_instant};
+use crate::{constant::CAPACITY, types::production_workload::ProductionWorkload, utils::get_instant};
 use cortex_m_semihosting::hprintln;
 use lm3s6965::Interrupt;
 use rtic_monotonics::Monotonic;
@@ -10,9 +10,12 @@ pub async fn regular_producer(
     cx: app::regular_producer::Context<'_>,
     mut sender: Sender<'static, u32, CAPACITY>,
 ) {
+    const REGULAR_PRODUCER_WORKLOAD: i32 = 756; 
     loop {
         let instant = get_instant();
         hprintln!("regular producer starts at { }", instant);
+        let mut production_workload: ProductionWorkload = Default::default();
+        production_workload.small_whetstone(REGULAR_PRODUCER_WORKLOAD);
         if let Err(_) = sender.try_send(cx.local.aux_work.clone()) {
             hprintln!("on call producer activation failed due to full buffer")
         }
