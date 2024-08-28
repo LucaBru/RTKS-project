@@ -1,1 +1,1 @@
-pub const CAPACITY: usize = 5;
+pub const BUFFER_CAPACITY: usize = 5;

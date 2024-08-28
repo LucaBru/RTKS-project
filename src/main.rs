@@ -13,7 +13,7 @@ mod utils;
 #[rtic::app(device = lm3s6965, dispatchers = [UART0, UART1, UART2, TIMER_0A, TIMER_0B])]
 mod app {
 
-    use crate::constant::CAPACITY;
+    use crate::constant::BUFFER_CAPACITY;
     use crate::tasks::periodic::*;
     use crate::tasks::sporadic::*;
     use crate::types::activation_log::ActivationLog;
@@ -26,7 +26,7 @@ mod app {
         make_channel,
     };
 
-    systick_monotonic!(Mono, 1000);
+    systick_monotonic!(Mono, 1000); // Mono is a monotonic timer that interrupts with rate 1khz, a.k.a 1 ms
 
     // shared resources
     #[shared]
@@ -36,24 +36,7 @@ mod app {
 
     // local resources
     #[local]
-    struct Local {
-        // regular producer
-        aux_work: u32,
-        reg_prod_period: MillisDurationU32,
-
-        // on call producer
-        on_call_prod_min_sep: MillisDurationU32,
-        push_butt_min_sep: MillisDurationU32,
-
-        // hardware interrupt
-        push_btn_period: MillisDurationU32,
-
-        log_reader_min_sep: MillisDurationU32,
-    }
-
-    // runs before any other task and returns resources
-    // this function disable preemption
-    // `#[init]` cannot access locals from the `#[local]` struct as they are initialized here.
+    struct Local {}
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
@@ -63,6 +46,7 @@ mod app {
 
     #[init]
     fn init(cx: init::Context) -> (Shared, Local) {
+        // 12 MHz is the clock rate (in QEMU) associated with Systick timer
         Mono::start(cx.core.SYST, 12_000_000);
 
         let (s, r) = make_channel!(u32, 5);
@@ -79,43 +63,32 @@ mod app {
                     time: Mono::now(),
                 },
             },
-            // initial values for the `#[local]` resources
-            Local {
-                aux_work: 100,
-                reg_prod_period: 1000.millis(),
-
-                on_call_prod_min_sep: 3000.millis(),
-                push_butt_min_sep: 5000.millis(),
-
-                push_btn_period: 5000.millis(),
-
-                log_reader_min_sep: 3000.millis(),
-            },
+            Local {},
         )
     }
 
     extern "Rust" {
 
-        #[task(priority = 6, local = [aux_work, reg_prod_period])]
+        #[task(priority = 6)]
         async fn regular_producer(
             cx: regular_producer::Context,
-            mut sender: Sender<'static, u32, CAPACITY>,
+            mut sender: Sender<'static, u32, BUFFER_CAPACITY>,
         );
 
-        #[task(priority = 4, local = [on_call_prod_min_sep])]
+        #[task(priority = 4)]
         async fn on_call_producer(
             cx: on_call_producer::Context,
-            mut receiver: Receiver<'static, u32, CAPACITY>,
+            mut receiver: Receiver<'static, u32, BUFFER_CAPACITY>,
         );
 
         // this task is a sporadic task that serve an aperiodic (hardware) interrupt
-        #[task(priority = 7, local = [push_butt_min_sep], shared = [activation_log])]
+        #[task(priority = 7, shared = [activation_log])]
         async fn push_button_server(mut cx: push_button_server::Context);
 
-        #[task(priority = 8, local = [push_btn_period])]
+        #[task(priority = 8)]
         async fn emit_hardware_interrupt(cx: emit_hardware_interrupt::Context);
 
-        #[task(priority = 2, shared = [activation_log], local = [log_reader_min_sep])]
+        #[task(priority = 2, shared = [activation_log])]
         async fn log_reader(mut cx: log_reader::Context);
     }
 }
