@@ -74,7 +74,7 @@ impl ProductionWorkload {
         return (x_temp + y_temp) / self.t2;
     }
 
-    pub fn small_whetstone(&mut self, kilo_whets: i32) {
+    pub fn small_whetstone(&mut self, kilo_whets: u32) {
 
         for _outer_loop_var in 1..kilo_whets {
             self.clear_array();
