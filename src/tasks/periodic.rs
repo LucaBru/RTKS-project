@@ -18,23 +18,26 @@ pub async fn regular_producer(
     const REGULAR_PRODUCER_WORKLOAD: u32 = 756;
     const ON_CALL_PRODUCER_WORKLOAD: u32 = 278;
     const PERIOD: MillisDurationU32 = MillisDurationU32::millis(1000);
+    let mut production_workload: ProductionWorkload = Default::default();
     loop {
         let instant = get_instant();
         hprintln!("regular producer starts at { }", instant);
-        let mut production_workload: ProductionWorkload = Default::default();
         production_workload.small_whetstone(REGULAR_PRODUCER_WORKLOAD);
 
-        if on_call_prod_activation_criterion()
+        if activation_condition::on_call_prod_activation_criterion()
             && let Err(_) = on_call_prod_sender.try_send(ON_CALL_PRODUCER_WORKLOAD)
         {
             hprintln!("on call producer activation failed due to full buffer")
         }
 
-        if activation_log_reader_criterion()
+        if activation_condition::activation_log_reader_criterion()
             && let Err(_) = activation_log_reader_sender.try_send(0)
         {
             hprintln!("activation log reader failed due to full buffer")
         }
+        
+        let final_instant = get_instant();
+        hprintln!("Regular producer finishes at { }", final_instant);
 
         Mono::delay_until(instant + PERIOD).await;
     }
