@@ -9,19 +9,23 @@ pub mod activation_condition {
     use core::sync::atomic::Ordering;
 
     const ON_CALL_PROD_MOD: i32 = 5;
-    const ACTIVATION_LOG_MOD: i32 = 1000;
+    const LOG_READER_MOD: i32 = 1000;
+    const LOG_READER_ACTV_RATIO: i32 = 3;
 
-    static ON_CALL_PROD_ACTIVATION_REQUEST: AtomicI32 = AtomicI32::new(0);
-    static ACTIVATION_LOG_READ_REQUEST: AtomicI32 = AtomicI32::new(0);
+    static ON_CALL_PROD_ACTV_REQUEST: AtomicI32 = AtomicI32::new(0);
+    static LOG_READER_ACTV_REQUEST: AtomicI32 = AtomicI32::new(0);
 
     pub fn on_call_prod_activation_criterion() -> bool {
-        ON_CALL_PROD_ACTIVATION_REQUEST.fetch_add(1, Ordering::Relaxed);
-        ON_CALL_PROD_ACTIVATION_REQUEST.load(Ordering::Relaxed) % ON_CALL_PROD_MOD == 2
+        ON_CALL_PROD_ACTV_REQUEST.fetch_add(1, Ordering::Relaxed);
+        ON_CALL_PROD_ACTV_REQUEST.load(Ordering::Relaxed) % ON_CALL_PROD_MOD == 2
     }
 
     pub fn activation_log_reader_criterion() -> bool {
-        ACTIVATION_LOG_READ_REQUEST.fetch_add(1, Ordering::Relaxed);
-        ACTIVATION_LOG_READ_REQUEST.load(Ordering::Relaxed) % ACTIVATION_LOG_MOD == 0
+        LOG_READER_ACTV_REQUEST.fetch_add(1, Ordering::Relaxed);
+        LOG_READER_ACTV_REQUEST.load(Ordering::Relaxed)
+            % LOG_READER_MOD
+            % LOG_READER_ACTV_RATIO
+            == 0
     }
 }
 
