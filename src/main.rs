@@ -17,7 +17,7 @@ mod app {
     use crate::constant::BUFFER_CAPACITY;
     use crate::tasks::periodic::*;
     use crate::tasks::sporadic::*;
-    use crate::types::activation_log::ActivationLog;
+    use crate::types::generic::ActivationEntry;
 
     use cortex_m_semihosting::hprintln;
     use panic_semihosting as _;
@@ -31,9 +31,7 @@ mod app {
 
     // shared resources
     #[shared]
-    struct Shared {
-        activation_log: ActivationLog,
-    }
+    struct Shared {}
 
     // local resources
     #[local]
@@ -51,22 +49,15 @@ mod app {
         Mono::start(cx.core.SYST, 12_000_000);
 
         let (on_call_prod_sender, on_call_prod_recv) = make_channel!(u32, 5);
-        let (actv_log_sender, actv_log_reader_recv) = make_channel!(u32, 1);
+        let (actv_log_reader_sender, actv_log_reader_recv) = make_channel!(u32, 1);
+        let (actv_log_sender, actv_log_recv) = make_channel!(ActivationEntry, 1);
 
-        regular_producer::spawn(on_call_prod_sender, actv_log_sender).ok();
+        regular_producer::spawn(on_call_prod_sender, actv_log_reader_sender).ok();
         on_call_producer::spawn(on_call_prod_recv).ok();
-        push_button_server::spawn().ok();
-        activation_log_reader::spawn(actv_log_reader_recv).ok();
+        external_event_server::spawn(actv_log_sender).ok();
+        activation_log_reader::spawn(actv_log_reader_recv, actv_log_recv).ok();
 
-        (
-            Shared {
-                activation_log: ActivationLog {
-                    counter: 0,
-                    time: Mono::now(),
-                },
-            },
-            Local {},
-        )
+        (Shared {}, Local {})
     }
 
     extern "Rust" {
@@ -74,8 +65,8 @@ mod app {
         #[task(priority = 6)]
         async fn regular_producer(
             cx: regular_producer::Context,
-            mut _send1: Sender<'static, u32, BUFFER_CAPACITY>,
-            mut _send2: Sender<'static, u32, 1>,
+            mut send1: Sender<'static, u32, BUFFER_CAPACITY>,
+            mut send2: Sender<'static, u32, 1>,
         );
 
         #[task(priority = 4)]
@@ -85,16 +76,20 @@ mod app {
         );
 
         // this task is a sporadic task that serve an aperiodic (hardware) interrupt
-        #[task(priority = 7, shared = [activation_log])]
-        async fn push_button_server(mut cx: push_button_server::Context);
+        #[task(priority = 7, local = [actv_counter: u8 = 0])]
+        async fn external_event_server(
+            mut cx: external_event_server::Context,
+            mut send: Sender<'static, ActivationEntry, 1>,
+        );
 
         #[task(priority = 8)]
         async fn emit_hardware_interrupt(cx: emit_hardware_interrupt::Context);
 
-        #[task(priority = 2, shared = [activation_log])]
+        #[task(priority = 2)]
         async fn activation_log_reader(
             mut cx: activation_log_reader::Context,
-            mut recv: Receiver<'static, u32, 1>,
+            mut recv1: Receiver<'static, u32, 1>,
+            mut recv2: Receiver<'static, ActivationEntry, 1>,
         );
     }
 }

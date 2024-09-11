@@ -19,9 +19,10 @@ pub async fn regular_producer(
     const ON_CALL_PRODUCER_WORKLOAD: u32 = 278;
     const PERIOD: MillisDurationU32 = MillisDurationU32::millis(1000);
     let mut production_workload: ProductionWorkload = Default::default();
+
     loop {
         let instant = get_instant();
-        hprintln!("regular producer starts at { }", instant);
+        hprintln!("regular producer started at {}", instant);
         production_workload.small_whetstone(REGULAR_PRODUCER_WORKLOAD);
 
         if activation_condition::on_call_prod_activation_criterion()
@@ -35,9 +36,9 @@ pub async fn regular_producer(
         {
             hprintln!("activation log reader failed due to full buffer")
         }
-        
+
         let final_instant = get_instant();
-        hprintln!("Regular producer finishes at { }", final_instant);
+        hprintln!("regular producer finished at { }", final_instant);
 
         Mono::delay_until(instant + PERIOD).await;
     }
@@ -47,6 +48,7 @@ pub async fn regular_producer(
 // peripherals method is unimplemented in lm3s6965 hal create, so this is a copy paste of the mechanism used from previous colleagues
 pub async fn emit_hardware_interrupt(_: app::emit_hardware_interrupt::Context<'_>) {
     const PERIOD: MillisDurationU32 = MillisDurationU32::millis(5000);
+
     loop {
         let instant = get_instant();
         rtic::pend(Interrupt::UART2);

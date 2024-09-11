@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-use crate::types::time_instant::TimeInstant;
+use crate::types::generic::TimeInstant;
 use rtic_monotonics::Monotonic;
 
 use crate::app::Mono;
