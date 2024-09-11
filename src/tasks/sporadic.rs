@@ -22,7 +22,6 @@ pub async fn on_call_producer(
         hprintln!("on call producer started at {}", instant);
 
         production_workload.small_whetstone(work);
-        hprintln!("on call producer has executed {} kilo whets of work", work);
 
         let final_instant = get_instant();
         hprintln!("on call producer finished at {}", final_instant);
@@ -58,11 +57,15 @@ pub async fn activation_log_reader(
     mut actv_log_recv: Receiver<'static, ActivationEntry, 1>,
 ) {
     const MIN_SEP: MillisDurationU32 = MillisDurationU32::millis(3000);
+    const WORKLOAD: u32 = 139;
+    let mut production_workload: ProductionWorkload = Default::default();
 
     while let Ok(_) = actv_recv.recv().await {
         // as on_call_producer here task can be preempted
         let instant = get_instant();
         hprintln!("activation log reader started at {}", instant);
+
+        production_workload.small_whetstone(WORKLOAD);
 
         match actv_log_recv.try_recv() {
             Ok(activation_entry) => hprintln!("Activation entry: {:?}", activation_entry),
