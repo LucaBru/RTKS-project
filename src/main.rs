@@ -4,7 +4,6 @@
 #![deny(unsafe_code)]
 #![feature(proc_macro_hygiene)]
 #![feature(let_chains)]
-//#![deny(missing_docs)]
 
 mod constant;
 mod tasks;
@@ -17,7 +16,7 @@ mod app {
     use crate::constant::BUFFER_CAPACITY;
     use crate::tasks::periodic::*;
     use crate::tasks::sporadic::*;
-    use crate::types::generic::ActivationEntry;
+    use crate::types::activation_log::ActivationLog;
 
     use cortex_m_semihosting::hprintln;
     use panic_semihosting as _;
@@ -31,7 +30,9 @@ mod app {
 
     // shared resources
     #[shared]
-    struct Shared {}
+    struct Shared {
+        actv_log: ActivationLog,
+    }
 
     // local resources
     #[local]
@@ -50,14 +51,18 @@ mod app {
 
         let (on_call_prod_sender, on_call_prod_recv) = make_channel!(u32, 5);
         let (actv_log_reader_sender, actv_log_reader_recv) = make_channel!(u32, 1);
-        let (actv_log_sender, actv_log_recv) = make_channel!(ActivationEntry, 1);
 
         regular_producer::spawn(on_call_prod_sender, actv_log_reader_sender).ok();
         on_call_producer::spawn(on_call_prod_recv).ok();
-        external_event_server::spawn(actv_log_sender).ok();
-        activation_log_reader::spawn(actv_log_reader_recv, actv_log_recv).ok();
+        external_event_server::spawn().ok();
+        activation_log_reader::spawn(actv_log_reader_recv).ok();
 
-        (Shared {}, Local {})
+        (
+            Shared {
+                actv_log: ActivationLog::build(),
+            },
+            Local {},
+        )
     }
 
     extern "Rust" {
@@ -76,20 +81,16 @@ mod app {
         );
 
         // this task is a sporadic task that serve an aperiodic (hardware) interrupt
-        #[task(priority = 7, local = [actv_counter: u8 = 0])]
-        async fn external_event_server(
-            mut cx: external_event_server::Context,
-            mut send: Sender<'static, ActivationEntry, 1>,
-        );
+        #[task(priority = 7, shared = [&actv_log])]
+        async fn external_event_server(mut cx: external_event_server::Context);
 
         #[task(priority = 8)]
         async fn emit_hardware_interrupt(cx: emit_hardware_interrupt::Context);
 
-        #[task(priority = 2)]
+        #[task(priority = 2, shared = [&actv_log])]
         async fn activation_log_reader(
             mut cx: activation_log_reader::Context,
             mut recv1: Receiver<'static, u32, 1>,
-            mut recv2: Receiver<'static, ActivationEntry, 1>,
         );
     }
 }
