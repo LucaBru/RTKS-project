@@ -9,8 +9,8 @@ use crate::app::{self, Mono};
 
 pub async fn on_call_producer(
     cx: app::on_call_producer::Context<'_>,
-    mut receiver: Receiver<'static, u32, BUFFER_CAPACITY>,
-    mut time_receiver: Receiver<'static, TimeInstant, 1>,
+    mut receiver: Receiver<'static, (u32, TimeInstant), BUFFER_CAPACITY>,
+    //mut time_receiver: Receiver<'static, TimeInstant, 1>,
 ) {
     const MIN_SEP: MillisDurationU32 = MillisDurationU32::millis(3000);
     let mut production_workload: ProductionWorkload = Default::default();
@@ -18,9 +18,8 @@ pub async fn on_call_producer(
     let next_time = cx.shared.task_activation_time.clone();
     Mono::delay_until(next_time).await;
 
-    while let Ok(work) = receiver.recv().await {
-        if let Ok(instant) = time_receiver.recv().await {
-            hprintln!("on call producer started at {}", instant);
+    while let Ok((work, instant)) = receiver.recv().await {
+        hprintln!("on call producer started at {}", instant);
 
             production_workload.small_whetstone(work);
 
@@ -28,9 +27,6 @@ pub async fn on_call_producer(
             hprintln!("on call producer finished at {}", final_instant);
 
             Mono::delay_until(instant + MIN_SEP).await
-        } else {
-            hprintln!("Error retrieving on call producer time instant")
-        }
     }
 }
 
@@ -55,15 +51,16 @@ pub async fn external_event_server(cx: app::external_event_server::Context<'_>) 
 
 pub async fn activation_log_reader(
     cx: app::activation_log_reader::Context<'_>,
-    mut actv_recv: Receiver<'static, u32, 1>,
+    mut actv_recv: Receiver<'static, TimeInstant, 1>,
 ) {
     const MIN_SEP: MillisDurationU32 = MillisDurationU32::millis(3000);
     const WORKLOAD: u32 = 139;
     let mut production_workload: ProductionWorkload = Default::default();
+    let next_time = cx.shared.task_activation_time.clone();
+    Mono::delay_until(next_time).await;
 
-    while let Ok(_) = actv_recv.recv().await {
+    while let Ok(instant) = actv_recv.recv().await {
         // as on_call_producer here task can be preempted
-        let instant = get_instant();
         hprintln!("activation log reader started at {}", instant);
 
         production_workload.small_whetstone(WORKLOAD);
