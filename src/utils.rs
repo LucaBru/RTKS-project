@@ -22,9 +22,7 @@ pub mod activation_condition {
 
     pub fn activation_log_reader_criterion() -> bool {
         LOG_READER_ACTV_REQUEST.fetch_add(1, Ordering::Relaxed);
-        LOG_READER_ACTV_REQUEST.load(Ordering::Relaxed)
-            % LOG_READER_MOD
-            % LOG_READER_ACTV_RATIO
+        LOG_READER_ACTV_REQUEST.load(Ordering::Relaxed) % LOG_READER_MOD % LOG_READER_ACTV_RATIO
             == 0
     }
 }

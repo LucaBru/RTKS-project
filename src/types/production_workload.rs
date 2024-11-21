@@ -4,42 +4,42 @@ use cortex_m_semihosting::hprintln;
 use libm;
 
 pub struct ProductionWorkload {
-        pub t: f64,
-        pub t1: f64,
-        pub t2: f64, 
-        pub n8: i32,
-        pub n9: usize, 
-        pub value: f64,
-        pub tolerance: f64, 
-        pub _i: i32,
-        pub ij: i32,
-        pub ik: i32,
-        pub il: i32, 
-        pub y: f64,
-        pub z: f64,
-        pub sum: f64,
-        pub e1: [f64; 7],
+    pub t: f64,
+    pub t1: f64,
+    pub t2: f64,
+    pub n8: i32,
+    pub n9: usize,
+    pub value: f64,
+    pub tolerance: f64,
+    pub _i: i32,
+    pub ij: i32,
+    pub ik: i32,
+    pub il: i32,
+    pub y: f64,
+    pub z: f64,
+    pub sum: f64,
+    pub e1: [f64; 7],
 }
 
 impl Default for ProductionWorkload {
     fn default() -> Self {
-        Self { 
+        Self {
             t: 0.499975,
             t1: 0.50025,
-            t2: 2.0, 
+            t2: 2.0,
             n8: 10,
             n9: 7,
             value: 0.941377,
-            tolerance: 0.00001, 
+            tolerance: 0.00001,
             _i: 0,
             ij: 1,
             ik: 2,
-            il: 3, 
+            il: 3,
             y: 1.0,
             z: 0.0,
             sum: 0.0,
             e1: [0.0; 7],
-         }
+        }
     }
 }
 
@@ -56,7 +56,10 @@ impl ProductionWorkload {
             self.ij = 1;
             self.ik = 1;
             self.il = 1;
-        } else if self.ij > self.n9.try_into().unwrap() || self.ik > self.n9.try_into().unwrap() || self.il > self.n9.try_into().unwrap() {
+        } else if self.ij > self.n9.try_into().unwrap()
+            || self.ik > self.n9.try_into().unwrap()
+            || self.il > self.n9.try_into().unwrap()
+        {
             hprintln!("Parameter error 2");
             self.ij = self.n9.try_into().unwrap();
             self.ik = self.n9.try_into().unwrap();
@@ -75,7 +78,6 @@ impl ProductionWorkload {
     }
 
     pub fn small_whetstone(&mut self, kilo_whets: u32) {
-
         for _outer_loop_var in 1..kilo_whets {
             self.clear_array();
             self.ij = (self.ik - self.ij) * (self.il - self.ik);
@@ -83,7 +85,9 @@ impl ProductionWorkload {
             self.il = (self.il - self.ik) * (self.ik + self.il);
             if (self.ik - 1) < 1 || (self.il - 1) < 1 {
                 hprintln!("Parameter error 3");
-            } else if (self.ik - 1) > self.n9.try_into().unwrap() || (self.il - 1) > self.n9.try_into().unwrap() {
+            } else if (self.ik - 1) > self.n9.try_into().unwrap()
+                || (self.il - 1) > self.n9.try_into().unwrap()
+            {
                 hprintln!("Parameter error 4");
             } else {
                 self.e1[(self.il - 1) as usize] = (self.ij + self.ik + self.il) as f64;
@@ -113,7 +117,7 @@ impl ProductionWorkload {
             } else if (self.ik + 1) < 1 {
                 hprintln!("Parameter error 8");
             } else {
-                self.e1[(self.ik +1) as usize] = libm::fabs(libm::cos(self.z));
+                self.e1[(self.ik + 1) as usize] = libm::fabs(libm::cos(self.z));
             }
 
             self.z = libm::sqrt(libm::exp(libm::log(self.e1[self.n9 - 1]) / self.t1));

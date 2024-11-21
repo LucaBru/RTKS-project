@@ -24,10 +24,7 @@ mod app {
     use panic_semihosting as _;
     use rtic_monotonics::systick::prelude::*;
     use rtic_sync::channel::Sender;
-    use rtic_sync::{
-        channel::Receiver,
-        make_channel,
-    };
+    use rtic_sync::{channel::Receiver, make_channel};
 
     systick_monotonic!(Mono, 1000); // Mono is a monotonic timer that interrupts with rate 1khz, a.k.a 1 ms
 
@@ -84,7 +81,7 @@ mod app {
         #[task(priority = 4, shared = [&task_activation_time])]
         async fn on_call_producer(
             cx: on_call_producer::Context,
-            mut recv: Receiver<'static, (u32, TimeInstant), BUFFER_CAPACITY>
+            mut recv: Receiver<'static, (u32, TimeInstant), BUFFER_CAPACITY>,
         );
 
         // this task is a sporadic task that serve an aperiodic (hardware) interrupt
