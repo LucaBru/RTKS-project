@@ -62,7 +62,7 @@ pub async fn activation_log_reader(
     let mut production_workload: ProductionWorkload = Default::default();
     let next_time = cx.shared.task_activation_time.clone();
     Mono::delay_until(next_time).await;
-
+    
     while let Ok(instant) = actv_recv.recv().await {
         // as on_call_producer here task can be preempted
         //hprintln!("activation log reader started at {}", instant);

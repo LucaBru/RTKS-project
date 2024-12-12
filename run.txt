@@ -1,0 +1,32 @@
+idle
+Push button server executed in 0 ms
+Regular producer execution time: 420 ms
+On call producer executed in 216 ms
+Regular producer execution time: 424 ms
+Read activation number 1 logged at time 151 ms
+Activation log reader executed in 111 ms
+Regular producer execution time: 435 ms
+Regular producer execution time: 433 ms
+Regular producer execution time: 436 ms
+Read activation number 1 logged at time 151 ms
+Activation log reader executed in 102 ms
+Push button server executed in 0 ms
+Regular producer execution time: 437 ms
+On call producer executed in 218 ms
+Regular producer execution time: 433 ms
+Regular producer execution time: 435 ms
+Read activation number 2 logged at time 5151 ms
+Activation log reader executed in 103 ms
+Regular producer execution time: 436 ms
+Regular producer execution time: 438 ms
+Push button server executed in 0 ms
+Regular producer execution time: 439 ms
+On call producer executed in 220 ms
+Read activation number 3 logged at time 10151 ms
+Activation log reader executed in 324 ms
+Regular producer execution time: 447 ms
+Regular producer execution time: 442 ms
+Regular producer execution time: 440 ms
+Read activation number 3 logged at time 10151 ms
+Activation log reader executed in 107 ms
+Regular producer execution time: 442 ms
